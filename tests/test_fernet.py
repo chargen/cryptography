@@ -81,6 +81,19 @@ class TestFernet(object):
         with pytest.raises(InvalidToken):
             f.decrypt(token.encode("ascii"), ttl=ttl_sec)
 
+    @json_parametrize(
+        ("secret", "token", "now", "ttl_sec"), "invalid_supplement.json"
+    )
+    def test_invalid_supplement(self, secret, token, now, ttl_sec, backend,
+                                monkeypatch):
+        # This test should be removed when/if the supplemental invalid JSON
+        # is merged back into the fernet spec (and we update our invalid.json)
+        f = Fernet(secret.encode("ascii"), backend=backend)
+        current_time = calendar.timegm(iso8601.parse_date(now).utctimetuple())
+        monkeypatch.setattr(time, "time", lambda: current_time)
+        with pytest.raises(InvalidToken):
+            f.decrypt(token.encode("ascii"), ttl=ttl_sec)
+
     def test_invalid_start_byte(self, backend):
         f = Fernet(base64.urlsafe_b64encode(b"\x00" * 32), backend=backend)
         with pytest.raises(InvalidToken):
@@ -95,6 +108,11 @@ class TestFernet(object):
         f = Fernet(base64.urlsafe_b64encode(b"\x00" * 32), backend=backend)
         with pytest.raises(InvalidToken):
             f.decrypt(b"\x00")
+
+    def test_invalid_base64_padding_token(self, backend):
+        f = Fernet(base64.urlsafe_b64encode(b"\x00" * 32), backend=backend)
+        with pytest.raises(InvalidToken):
+            f.decrypt(b"aaa")
 
     def test_unicode(self, backend):
         f = Fernet(base64.urlsafe_b64encode(b"\x00" * 32), backend=backend)

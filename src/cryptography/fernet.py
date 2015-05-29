@@ -7,6 +7,7 @@ from __future__ import absolute_import, division, print_function
 import base64
 import binascii
 import os
+import re
 import struct
 import time
 
@@ -24,6 +25,7 @@ class InvalidToken(Exception):
 
 
 _MAX_CLOCK_SKEW = 60
+INVALID_B64_RE = re.compile("[^-A-Za-z0-9_=]|=[^=]|===$")
 
 
 class Fernet(object):
@@ -75,6 +77,16 @@ class Fernet(object):
             raise TypeError("token must be bytes.")
 
         current_time = int(time.time())
+
+        # Python (as well as many other languages) chooses to use a liberal
+        # method of decoding. Specifically, characters outside the base64
+        # alphabet are silently dropped and parsing is terminated when valid
+        # padding is detected. This is at odds with the recommendations in
+        # RFC 4648 (section 3.3) but oh well. The following will check to see
+        # if any invalid characters are present as well as detecting = in
+        # invalid positions.
+        if INVALID_B64_RE.search(token):
+            raise InvalidToken
 
         try:
             data = base64.urlsafe_b64decode(token)

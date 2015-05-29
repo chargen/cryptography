@@ -267,6 +267,7 @@ Recipes
 ~~~~~~~
 
 * Fernet from its `specification repository`_.
+* Fernet ``invalid_supplement.json`` to add tests for strict base64 decoding.
 
 Symmetric ciphers
 ~~~~~~~~~~~~~~~~~
