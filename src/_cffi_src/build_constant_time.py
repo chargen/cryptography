@@ -20,7 +20,7 @@ with open(os.path.join(
     functions = f.read()
 
 ffi = build_ffi(
-    module_name="_constant_time",
+    module_name="cryptography.hazmat.bindings._constant_time",
     cdef_source=types,
     verify_source=functions,
     extra_link_args=extra_link_args(compiler_type()),

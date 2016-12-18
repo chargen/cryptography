@@ -11,8 +11,25 @@ from distutils.dist import Distribution
 from cffi import FFI
 
 
-def build_ffi_for_binding(module_name, module_prefix, modules, libraries=[],
-                          extra_compile_args=[], extra_link_args=[]):
+def get_types_includes(module_prefix, modules):
+    includes = []
+    types = []
+    customizations = []
+    for name in modules:
+        __import__(module_prefix + name)
+        module = sys.modules[module_prefix + name]
+
+        includes.append(module.INCLUDES)
+        types.append(module.TYPES)
+        customizations.append(module.CUSTOMIZATIONS)
+
+    return types, includes, customizations
+
+
+def build_ffi_for_binding(module_name, module_prefix, modules, types,
+                          includes, customizations, libraries=[],
+                          extra_compile_args=[], extra_link_args=[],
+                          include_ffi=None):
     """
     Modules listed in ``modules`` should have the following attributes:
 
@@ -24,20 +41,14 @@ def build_ffi_for_binding(module_name, module_prefix, modules, libraries=[],
         can be used to do things like test for a define and provide an
         alternate implementation based on that.
     """
-    types = []
-    includes = []
     functions = []
     macros = []
-    customizations = []
     for name in modules:
         __import__(module_prefix + name)
         module = sys.modules[module_prefix + name]
 
-        types.append(module.TYPES)
         macros.append(module.MACROS)
         functions.append(module.FUNCTIONS)
-        includes.append(module.INCLUDES)
-        customizations.append(module.CUSTOMIZATIONS)
 
     # We include functions here so that if we got any of their definitions
     # wrong, the underlying C compiler will explode. In C you are allowed
@@ -59,14 +70,18 @@ def build_ffi_for_binding(module_name, module_prefix, modules, libraries=[],
         libraries=libraries,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
+        include_ffi=include_ffi
     )
 
     return ffi
 
 
 def build_ffi(module_name, cdef_source, verify_source, libraries=[],
-              extra_compile_args=[], extra_link_args=[]):
+              extra_compile_args=[], extra_link_args=[], include_ffi=None):
     ffi = FFI()
+    if include_ffi is not None:
+        for additional_ffi in include_ffi:
+            ffi.include(additional_ffi)
     ffi.cdef(cdef_source)
     ffi.set_source(
         module_name,

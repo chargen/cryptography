@@ -5,10 +5,14 @@
 from __future__ import absolute_import, division, print_function
 
 INCLUDES = """
+#include <openssl/ec.h>
 #include <openssl/evp.h>
 """
 
 TYPES = """
+typedef ... X509_ATTRIBUTE;
+typedef ... PKCS8_PRIV_KEY_INFO;
+
 typedef ... EVP_CIPHER;
 typedef ... EVP_CIPHER_CTX;
 typedef ... EVP_MD;

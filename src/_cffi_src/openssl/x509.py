@@ -5,6 +5,7 @@
 from __future__ import absolute_import, division, print_function
 
 INCLUDES = """
+#include <openssl/aes.h>
 #include <openssl/ssl.h>
 
 /*
@@ -29,7 +30,6 @@ typedef struct {
     ...;
 } X509_ALGOR;
 
-typedef ... X509_ATTRIBUTE;
 typedef ... X509_CINF;
 typedef ... X509_EXTENSION;
 typedef ... X509_EXTENSIONS;
@@ -42,7 +42,6 @@ typedef ... X509;
 
 typedef ... NETSCAPE_SPKI;
 
-typedef ... PKCS8_PRIV_KEY_INFO;
 
 static const int X509_FLAG_COMPAT;
 static const int X509_FLAG_NO_HEADER;

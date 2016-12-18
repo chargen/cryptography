@@ -209,6 +209,8 @@ def keywords_with_side_effects(argv):
         }
     else:
         cffi_modules = [
+            "src/_cffi_src/build_openssl.py:ffi_sub1",
+            "src/_cffi_src/build_openssl.py:ffi_sub2",
             "src/_cffi_src/build_openssl.py:ffi",
             "src/_cffi_src/build_constant_time.py:ffi",
             "src/_cffi_src/build_padding.py:ffi",
@@ -327,7 +329,6 @@ setup(
 
     # for cffi
     zip_safe=False,
-    ext_package="cryptography.hazmat.bindings",
     entry_points={
         "cryptography.backends": backends,
     },

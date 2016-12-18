@@ -4,29 +4,37 @@
 
 from __future__ import absolute_import, division, print_function
 
-from _cffi_src.utils import build_ffi_for_binding
+from _cffi_src.utils import build_ffi_for_binding, get_types_includes
 
+
+modules = [
+    "cf",
+    "common_digest",
+    "common_hmac",
+    "common_key_derivation",
+    "common_cryptor",
+    "common_symmetric_key_wrap",
+    "seccertificate",
+    "secimport",
+    "secitem",
+    "seckey",
+    "seckeychain",
+    "secpolicy",
+    "sectransform",
+    "sectrust",
+    "secure_transport",
+]
+
+types, includes, customizations = get_types_includes(
+    "_cffi_src.commoncrypto.", modules)
 
 ffi = build_ffi_for_binding(
-    module_name="_commoncrypto",
+    module_name="cryptography.hazmat.bindings._commoncrypto",
     module_prefix="_cffi_src.commoncrypto.",
-    modules=[
-        "cf",
-        "common_digest",
-        "common_hmac",
-        "common_key_derivation",
-        "common_cryptor",
-        "common_symmetric_key_wrap",
-        "seccertificate",
-        "secimport",
-        "secitem",
-        "seckey",
-        "seckeychain",
-        "secpolicy",
-        "sectransform",
-        "sectrust",
-        "secure_transport",
-    ],
+    modules=modules,
+    types=types,
+    includes=includes,
+    customizations=customizations,
     extra_link_args=[
         "-framework", "Security", "-framework", "CoreFoundation"
     ],

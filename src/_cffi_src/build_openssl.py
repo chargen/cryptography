@@ -8,7 +8,7 @@ import os
 import sys
 
 from _cffi_src.utils import (
-    build_ffi_for_binding, compiler_type, extra_link_args
+    build_ffi_for_binding, compiler_type, extra_link_args, get_types_includes
 )
 
 
@@ -39,24 +39,50 @@ def _osx_libraries(build_static):
     else:
         return ["ssl", "crypto"]
 
+modules = [
+    "cryptography",
+    "aes",
+    "asn1",
+    "bignum",
+    "bio",
+    "cmac",
+    "cms",
+    "conf",
+    "crypto",
+    "dh",
+    "dsa",
+    "ec",
+    "ecdh",
+    "ecdsa",
+    "engine",
+    "err",
+    "evp",
+    "hmac",
+    "nid",
+    "objects",
+    "ocsp",
+    "opensslv",
+    "osrandom_engine",
+    "pem",
+    "pkcs12",
+    "rand",
+    "rsa",
+    "ssl",
+    "x509",
+    "x509name",
+    "x509v3",
+    "x509_vfy",
+    "pkcs7",
+    "callbacks",
+]
 
-ffi = build_ffi_for_binding(
-    module_name="_openssl",
+types, includes, customizations = get_types_includes(
+    "_cffi_src.openssl.", modules)
+
+ffi_sub1 = build_ffi_for_binding(
+    module_name="cryptography.hazmat.bindings._openssl_1",
     module_prefix="_cffi_src.openssl.",
     modules=[
-        # This goes first so we can define some cryptography-wide symbols.
-        "cryptography",
-
-        "aes",
-        "asn1",
-        "bignum",
-        "bio",
-        "cmac",
-        "cms",
-        "conf",
-        "crypto",
-        "dh",
-        "dsa",
         "ec",
         "ecdh",
         "ecdsa",
@@ -73,6 +99,20 @@ ffi = build_ffi_for_binding(
         "pkcs12",
         "rand",
         "rsa",
+    ],
+    types=types,
+    includes=includes,
+    customizations=customizations,
+    libraries=_get_openssl_libraries(sys.platform),
+    extra_link_args=extra_link_args(compiler_type()),
+)
+
+ffi_sub1.compile(verbose=True)
+
+ffi_sub2 = build_ffi_for_binding(
+    module_name="cryptography.hazmat.bindings._openssl_2",
+    module_prefix="_cffi_src.openssl.",
+    modules=[
         "ssl",
         "x509",
         "x509name",
@@ -81,6 +121,36 @@ ffi = build_ffi_for_binding(
         "pkcs7",
         "callbacks",
     ],
+    types=[],
+    includes=includes,
+    customizations=customizations,
     libraries=_get_openssl_libraries(sys.platform),
     extra_link_args=extra_link_args(compiler_type()),
+    include_ffi=[ffi_sub1],
 )
+ffi_sub2.compile(verbose=True)
+
+
+ffi = build_ffi_for_binding(
+    module_name="cryptography.hazmat.bindings._openssl",
+    module_prefix="_cffi_src.openssl.",
+    modules=[
+        "aes",
+        "asn1",
+        "bignum",
+        "bio",
+        "cmac",
+        "cms",
+        "conf",
+        "crypto",
+        "dh",
+        "dsa",
+    ],
+    types=[],
+    includes=includes,
+    customizations=customizations,
+    libraries=_get_openssl_libraries(sys.platform),
+    extra_link_args=extra_link_args(compiler_type()),
+    include_ffi=[ffi_sub1, ffi_sub2],
+)
+ffi.compile(verbose=True)

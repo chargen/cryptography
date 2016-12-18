@@ -9,6 +9,8 @@ INCLUDES = """
 """
 
 TYPES = """
+typedef struct bio_st BIO;
+
 static const int Cryptography_HAS_EC_CODES;
 static const int Cryptography_HAS_RSA_R_PKCS_DECODING_ERROR;
 
