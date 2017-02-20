@@ -1104,3 +1104,57 @@ class TestECDH(object):
 
         with pytest.raises(ValueError):
             key.exchange(ec.ECDH(), public_key)
+
+
+@pytest.mark.requires_backend_interface(interface=EllipticCurveBackend)
+def test_rfc6979(backend):
+    _skip_curve_unsupported(backend, ec.SECT163K1())
+    key = ec.EllipticCurvePrivateNumbers(
+        0x09A4D6792295A7F730FC3F2B49CBC0F62E862272F,
+        ec.EllipticCurvePublicNumbers(
+            0x79AEE090DB05EC252D5CB4452F356BE198A4FF96F,
+            0x782E29634DDC9A31EF40386E896BAA18B53AFA5A3,
+            ec.SECT163K1()
+        )
+    ).private_key(backend)
+    signature = key.sign(b"sample", ec.ECDSA(hashes.SHA256()))
+    assert signature == encode_dss_signature(
+        0x113A63990598A3828C407C0F4D2438D990DF99A7F,
+        0x1313A2E03F5412DDB296A22E2C455335545672D9F
+    )
+
+
+@pytest.mark.requires_backend_interface(interface=EllipticCurveBackend)
+def test_rfc6979_2(backend):
+    _skip_curve_unsupported(backend, ec.SECP224R1())
+    key = ec.EllipticCurvePrivateNumbers(
+        0xF220266E1105BFE3083E03EC7A3A654651F45E37167E88600BF257C1,
+        ec.EllipticCurvePublicNumbers(
+            0x00CF08DA5AD719E42707FA431292DEA11244D64FC51610D94B130D6C,
+            0xEEAB6F3DEBE455E3DBF85416F7030CBD94F34F2D6F232C69F3C1385A,
+            ec.SECP224R1()
+        )
+    ).private_key(backend)
+    signature = key.sign(b"sample", ec.ECDSA(hashes.SHA1()))
+    assert signature == encode_dss_signature(
+        0x22226F9D40A96E19C4A301CE5B74B115303C0F3A4FD30FC257FB57AC,
+        0x66D1CDD83E3AF75605DD6E2FEFF196D30AA7ED7A2EDF7AF475403D69
+    )
+
+
+@pytest.mark.requires_backend_interface(interface=EllipticCurveBackend)
+def test_rfc6979_3(backend):
+    _skip_curve_unsupported(backend, ec.SECP224R1())
+    key = ec.EllipticCurvePrivateNumbers(
+        0xF220266E1105BFE3083E03EC7A3A654651F45E37167E88600BF257C1,
+        ec.EllipticCurvePublicNumbers(
+            0x00CF08DA5AD719E42707FA431292DEA11244D64FC51610D94B130D6C,
+            0xEEAB6F3DEBE455E3DBF85416F7030CBD94F34F2D6F232C69F3C1385A,
+            ec.SECP224R1()
+        )
+    ).private_key(backend)
+    signature = key.sign(b"sample", ec.ECDSA(hashes.SHA512()))
+    assert signature == encode_dss_signature(
+        0x074BD1D979D5F32BF958DDC61E4FB4872ADCAFEB2256497CDAC30397,
+        0xA4CECA196C3D5A1FF31027B33185DC8EE43F288B21AB342E5D8EB084
+    )

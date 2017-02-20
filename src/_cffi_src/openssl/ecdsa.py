@@ -39,6 +39,7 @@ int ECDSA_verify(int, const unsigned char *, int, const unsigned char *, int,
                  EC_KEY *);
 int ECDSA_size(const EC_KEY *);
 
+const BIGNUM *EC_GROUP_get0_order(const EC_GROUP *);
 """
 
 CUSTOMIZATIONS = """

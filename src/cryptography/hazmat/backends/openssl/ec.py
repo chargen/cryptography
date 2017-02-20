@@ -11,7 +11,7 @@ from cryptography.exceptions import (
 from cryptography.hazmat.backends.openssl.utils import (
     _calculate_digest_and_algorithm
 )
-from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives import hashes, hmac, serialization
 from cryptography.hazmat.primitives.asymmetric import (
     AsymmetricSignatureContext, AsymmetricVerificationContext, ec
 )
@@ -66,14 +66,134 @@ def _sn_to_elliptic_curve(backend, sn):
         )
 
 
-def _ecdsa_sig_sign(backend, private_key, data):
+def int2octets(x, qlen):
+    return utils.int_to_bytes(x, (qlen + 7) // 8)
+
+
+def bits2int(data, qlen):
+    value = utils.int_from_bytes(data, 'big')
+    # TODO: length of data...is this right? had a bug earlier where
+    # we converted bytes to int and it was 255 bits, but really should have
+    # been 256, so bytes seems like it migh be right.
+    rem = len(data) * 8 - qlen
+    if rem > 0:
+        value = value >> rem
+
+    return value
+
+
+def bits2octets(backend, data, q, qlen):
+    z1 = bits2int(data, qlen)
+    z2 = z1 % backend._bn_to_int(q)
+    return int2octets(z2, qlen)
+
+
+def _generate_rfc6979_nonce(backend, algorithm, digest, private_key):
+    _, get_func, group = backend._ec_key_determine_group_get_set_funcs(
+        private_key._ec_key
+    )
+    order = backend._lib.EC_GROUP_get0_order(group)
+    backend.openssl_assert(order != backend._ffi.NULL)
+    qlen = backend._lib.BN_num_bits(order)
+
+    # step a is hash the message to get a digest. the digest is passed in here
+    # so step a is complete
+    # step b, set v
+    v = b"\x01" * algorithm.digest_size
+    # step c, set k (hmac key)
+    hmac_key = b"\x00" * algorithm.digest_size
+    # step d, set K = HMAC_K(V || 0x00 || int2octets(x) || bits2octets(h1))
+    hash_ctx = hmac.HMAC(hmac_key, algorithm, backend)
+    pn = private_key.private_numbers()
+    x = int2octets(pn.private_value, qlen)
+    digest = bits2octets(backend, digest, order, qlen)
+    hash_ctx.update(v + b"\x00" + x + digest)
+    hmac_key = hash_ctx.finalize()
+    # step e, set v to HMAC_K(V)
+    hash_ctx = hmac.HMAC(hmac_key, algorithm, backend)
+    hash_ctx.update(v)
+    v = hash_ctx.finalize()
+    # step f, set K = HMAC_K(V || 0x01 || int2octets(x) || bits2octets(h1))
+    hash_ctx = hmac.HMAC(hmac_key, algorithm, backend)
+    hash_ctx.update(v + b"\x01" + x + digest)
+    hmac_key = hash_ctx.finalize()
+    # step g, V = HMAC_K(V)
+    hash_ctx = hmac.HMAC(hmac_key, algorithm, backend)
+    hash_ctx.update(v)
+    v = hash_ctx.finalize()
+    # step h
+    qlenceil = ((qlen + 7) // 8)
+    while True:
+        tlen = 0
+        t = b""
+        while tlen < qlenceil:
+            h = hmac.HMAC(hmac_key, algorithm, backend)
+            h.update(v)
+            v = h.finalize()
+            t += v
+            tlen = len(t)
+
+        k = bits2int(t, qlen)
+        k = backend._int_to_bn(k)
+        k = backend._ffi.gc(k, backend._lib.BN_free)
+        backend.openssl_assert(k != backend._ffi.NULL)
+        # Check to see if k is in [1, q-1]
+        if (
+            backend._lib.BN_is_zero(k) != 1 and
+            backend._lib.BN_cmp(k, order) == -1
+        ):
+            with backend._tmp_bn_ctx() as bn_ctx:
+                tmp_point = backend._lib.EC_POINT_new(group)
+                backend.openssl_assert(tmp_point != backend._ffi.NULL)
+                tmp_point = backend._ffi.gc(
+                    tmp_point, backend._lib.EC_POINT_free)
+                x = backend._lib.BN_new()
+                backend.openssl_assert(x != backend._ffi.NULL)
+                x = backend._ffi.gc(x, backend._lib.BN_free)
+                res = backend._lib.EC_POINT_mul(
+                    group, tmp_point, k, backend._ffi.NULL,
+                    backend._ffi.NULL, bn_ctx
+                )
+                backend.openssl_assert(res == 1)
+                # This uses either EC_POINT_get_affine_coordinates_GF2m or GFp
+                # depending on group.
+                res = get_func(group, tmp_point, x, backend._ffi.NULL, bn_ctx)
+                backend.openssl_assert(res == 1)
+                r = backend._lib.BN_new()
+                backend.openssl_assert(r != backend._ffi.NULL)
+                r = backend._ffi.gc(r, backend._lib.BN_free)
+                res = backend._lib.BN_nnmod(r, x, order, bn_ctx)
+                backend.openssl_assert(res == 1)
+                if (
+                    not backend._lib.BN_is_zero(r) and
+                    not backend._lib.BN_is_zero(k)
+                ):
+                    backend._lib.BN_mod_inverse(k, k, order, bn_ctx)
+                    backend.openssl_assert(k != backend._ffi.NULL)
+                    break
+        else:
+            # k was too big or zero, set a new k/v and loop
+            # K = HMAC_K(V || 0x00)
+            # V = HMAC_K(V)
+            hash_ctx = hmac.HMAC(hmac_key, algorithm, backend)
+            hash_ctx.update(v + b"\x00")
+            hmac_key = hash_ctx.finalize()
+            hash_ctx = hmac.HMAC(hmac_key, algorithm, backend)
+            hash_ctx.update(v)
+            v = hash_ctx.finalize()
+
+    return (k, r)
+
+
+def _ecdsa_sig_sign(backend, private_key, data, algorithm):
     max_size = backend._lib.ECDSA_size(private_key._ec_key)
     backend.openssl_assert(max_size > 0)
 
     sigbuf = backend._ffi.new("unsigned char[]", max_size)
     siglen_ptr = backend._ffi.new("unsigned int[]", 1)
-    res = backend._lib.ECDSA_sign(
-        0, data, len(data), sigbuf, siglen_ptr, private_key._ec_key
+    kinv, rp = _generate_rfc6979_nonce(backend, algorithm, data, private_key)
+    res = backend._lib.ECDSA_sign_ex(
+        0, data, len(data), sigbuf, siglen_ptr, kinv, rp, private_key._ec_key
     )
     backend.openssl_assert(res == 1)
     return backend._ffi.buffer(sigbuf)[:siglen_ptr[0]]
@@ -216,7 +336,7 @@ class _EllipticCurvePrivateKey(object):
         data, algorithm = _calculate_digest_and_algorithm(
             self._backend, data, signature_algorithm._algorithm
         )
-        return _ecdsa_sig_sign(self._backend, self, data)
+        return _ecdsa_sig_sign(self._backend, self, data, algorithm)
 
 
 @utils.register_interface(ec.EllipticCurvePublicKeyWithSerialization)
