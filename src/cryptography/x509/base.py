@@ -371,6 +371,8 @@ class CertificateSigningRequestBuilder(object):
             raise TypeError('Expecting x509.Name object.')
         if self._subject_name is not None:
             raise ValueError('The subject name may only be set once.')
+
+        name._validate()
         return CertificateSigningRequestBuilder(name, self._extensions)
 
     def add_extension(self, extension, critical):
@@ -381,6 +383,7 @@ class CertificateSigningRequestBuilder(object):
             raise TypeError("extension must be an ExtensionType")
 
         extension = Extension(extension.oid, critical, extension)
+        extension._validate()
 
         # TODO: This is quadratic in the number of extensions
         for e in self._extensions:
@@ -420,6 +423,8 @@ class CertificateBuilder(object):
             raise TypeError('Expecting x509.Name object.')
         if self._issuer_name is not None:
             raise ValueError('The issuer name may only be set once.')
+
+        name._validate()
         return CertificateBuilder(
             name, self._subject_name, self._public_key,
             self._serial_number, self._not_valid_before,
@@ -434,6 +439,8 @@ class CertificateBuilder(object):
             raise TypeError('Expecting x509.Name object.')
         if self._subject_name is not None:
             raise ValueError('The subject name may only be set once.')
+
+        name._validate()
         return CertificateBuilder(
             self._issuer_name, name, self._public_key,
             self._serial_number, self._not_valid_before,
@@ -533,6 +540,7 @@ class CertificateBuilder(object):
             raise TypeError("extension must be an ExtensionType")
 
         extension = Extension(extension.oid, critical, extension)
+        extension._validate()
 
         # TODO: This is quadratic in the number of extensions
         for e in self._extensions:
@@ -584,6 +592,8 @@ class CertificateRevocationListBuilder(object):
             raise TypeError('Expecting x509.Name object.')
         if self._issuer_name is not None:
             raise ValueError('The issuer name may only be set once.')
+
+        issuer_name._validate()
         return CertificateRevocationListBuilder(
             issuer_name, self._last_update, self._next_update,
             self._extensions, self._revoked_certificates
@@ -633,6 +643,7 @@ class CertificateRevocationListBuilder(object):
             raise TypeError("extension must be an ExtensionType")
 
         extension = Extension(extension.oid, critical, extension)
+        extension._validate()
 
         # TODO: This is quadratic in the number of extensions
         for e in self._extensions:
@@ -711,6 +722,7 @@ class RevokedCertificateBuilder(object):
             raise TypeError("extension must be an ExtensionType")
 
         extension = Extension(extension.oid, critical, extension)
+        extension._validate()
 
         # TODO: This is quadratic in the number of extensions
         for e in self._extensions:
