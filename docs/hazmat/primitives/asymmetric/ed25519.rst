@@ -1,0 +1,76 @@
+.. hazmat::
+
+Ed25519 signing
+===============
+
+.. currentmodule:: cryptography.hazmat.primitives.asymmetric.ed25519
+
+
+Ed25519 is a signing algorithm using `EdDSA`_ and `Curve25519`_. If you do not
+have legacy interoperability concerns then you should strongly consider using
+this signature algorithm.
+
+
+Signing & Verification
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. doctest::
+
+    >>> from cryptography.hazmat.backends import default_backend
+    >>> from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    >>> private_key = Ed25519PrivateKey.generate()
+    >>> signature = private_key.sign(b"my authenticated message")
+    >>> public_key = private_key.public_key()
+    >>> # Raises InvalidSignature if verification fails
+    >>> public_key.verify(signature, b"my authenticated message")
+
+Key interfaces
+~~~~~~~~~~~~~~
+
+.. class:: Ed25519PrivateKey
+
+    .. versionadded:: 2.4
+
+    .. classmethod:: generate()
+
+        Generate an Ed25519 private key.
+
+        :returns: :class:`Ed25519PrivateKey`
+
+    .. method:: public_key()
+
+        :returns: :class:`Ed25519PublicKey`
+
+    .. method:: sign(data)
+
+        :param bytes data: The data to sign.
+
+        :returns bytes: The 64 byte signature.
+
+.. class:: Ed25519PublicKey
+
+    .. versionadded:: 2.4
+
+    .. classmethod:: from_public_bytes(data)
+
+        :param bytes data: 32 byte public key.
+
+        :returns: :class:`Ed25519PublicKey`
+
+    .. method:: public_bytes()
+
+        :returns bytes: The raw bytes of the public key.
+
+    .. method:: verify(signature, data)
+
+        :param bytes signature: The signature to verify.
+
+        :param bytes data: The data to verify.
+
+        :raises cryptography.exceptions.InvalidSignature: Raised when the
+            signature cannot be verified.
+
+
+
+.. _`EdDSA`: https://en.wikipedia.org/wiki/EdDSA
+.. _`Curve25519`: https://en.wikipedia.org/wiki/Curve25519

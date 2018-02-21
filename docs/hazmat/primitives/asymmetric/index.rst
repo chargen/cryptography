@@ -25,6 +25,7 @@ private key is able to decrypt it.
 
     x25519
     ec
+    ed25519
     rsa
     dh
     dsa

@@ -33,6 +33,9 @@ from cryptography.hazmat.backends.openssl.dsa import (
 from cryptography.hazmat.backends.openssl.ec import (
     _EllipticCurvePrivateKey, _EllipticCurvePublicKey
 )
+from cryptography.hazmat.backends.openssl.ed25519 import (
+    _Ed25519PrivateKey, _Ed25519PublicKey
+)
 from cryptography.hazmat.backends.openssl.encode_asn1 import (
     _CRL_ENTRY_EXTENSION_ENCODE_HANDLERS,
     _CRL_EXTENSION_ENCODE_HANDLERS, _EXTENSION_ENCODE_HANDLERS,
@@ -1897,6 +1900,13 @@ class Backend(object):
         backend.openssl_assert(res == 1)
         return _X25519PublicKey(self, evp_pkey)
 
+    def _generic_25519_load_private_bytes(self, prefix, data, keycls):
+        bio = self._bytes_to_bio(prefix + data)
+        evp_pkey = backend._lib.d2i_PrivateKey_bio(bio.bio, self._ffi.NULL)
+        self.openssl_assert(evp_pkey != self._ffi.NULL)
+        evp_pkey = self._ffi.gc(evp_pkey, self._lib.EVP_PKEY_free)
+        return keycls(self, evp_pkey)
+
     def x25519_load_private_bytes(self, data):
         # OpenSSL only has facilities for loading PKCS8 formatted private
         # keys using the algorithm identifiers specified in
@@ -1912,23 +1922,14 @@ class Backend(object):
         # contains an OCTET STRING of length 32! So the last two bytes here
         # are \x04\x20, which is an OCTET STRING of length 32.
         pkcs8_prefix = b'0.\x02\x01\x000\x05\x06\x03+en\x04"\x04 '
-        bio = self._bytes_to_bio(pkcs8_prefix + data)
-        evp_pkey = backend._lib.d2i_PrivateKey_bio(bio.bio, self._ffi.NULL)
-        self.openssl_assert(evp_pkey != self._ffi.NULL)
-        evp_pkey = self._ffi.gc(evp_pkey, self._lib.EVP_PKEY_free)
-        self.openssl_assert(
-            self._lib.EVP_PKEY_id(evp_pkey) == self._lib.EVP_PKEY_X25519
+        return self._generic_25519_load_private_bytes(
+            pkcs8_prefix, data, _X25519PrivateKey
         )
-        return _X25519PrivateKey(self, evp_pkey)
 
-    def x25519_generate_key(self):
-        evp_pkey_ctx = self._lib.EVP_PKEY_CTX_new_id(
-            self._lib.NID_X25519, self._ffi.NULL
-        )
+    def _generic_25519_generate_key(self, nid, keycls):
+        evp_pkey_ctx = self._lib.EVP_PKEY_CTX_new_id(nid, self._ffi.NULL)
         self.openssl_assert(evp_pkey_ctx != self._ffi.NULL)
-        evp_pkey_ctx = self._ffi.gc(
-            evp_pkey_ctx, self._lib.EVP_PKEY_CTX_free
-        )
+        evp_pkey_ctx = self._ffi.gc(evp_pkey_ctx, self._lib.EVP_PKEY_CTX_free)
         res = self._lib.EVP_PKEY_keygen_init(evp_pkey_ctx)
         self.openssl_assert(res == 1)
         evp_ppkey = self._ffi.new("EVP_PKEY **")
@@ -1936,10 +1937,50 @@ class Backend(object):
         self.openssl_assert(res == 1)
         self.openssl_assert(evp_ppkey[0] != self._ffi.NULL)
         evp_pkey = self._ffi.gc(evp_ppkey[0], self._lib.EVP_PKEY_free)
-        return _X25519PrivateKey(self, evp_pkey)
+        return keycls(self, evp_pkey)
+
+    def x25519_generate_key(self):
+        return self._generic_25519_generate_key(
+            self._lib.NID_X25519, _X25519PrivateKey
+        )
 
     def x25519_supported(self):
         return self._lib.CRYPTOGRAPHY_OPENSSL_110_OR_GREATER
+
+    def ed25519_supported(self):
+        return not self._lib.CRYPTOGRAPHY_OPENSSL_LESS_THAN_111
+
+    def ed25519_load_public_bytes(self, data):
+        pkcs8_prefix = b'0.\x02\x01\x000\x05\x06\x03+ep\x04"\x04 '
+        bio = self._bytes_to_bio(pkcs8_prefix + data)
+        evp_pkey = backend._lib.d2i_PUBKEY_bio(bio.bio, self._ffi.NULL)
+        self.openssl_assert(evp_pkey != self._ffi.NULL)
+        evp_pkey = self._ffi.gc(evp_pkey, self._lib.EVP_PKEY_free)
+        return _Ed25519PublicKey(self, evp_pkey)
+
+    def ed25519_load_private_bytes(self, data):
+        # OpenSSL only has facilities for loading PKCS8 formatted private
+        # keys using the algorithm identifiers specified in
+        # https://tools.ietf.org/html/draft-ietf-curdle-pkix-03.
+        # This is the standard PKCS8 prefix for a 32 byte Ed25519 key.
+        # The form is:
+        #    0:d=0  hl=2 l=  46 cons: SEQUENCE
+        #    2:d=1  hl=2 l=   1 prim: INTEGER           :00
+        #    5:d=1  hl=2 l=   5 cons: SEQUENCE
+        #    7:d=2  hl=2 l=   3 prim: OBJECT            :1.3.101.112
+        #    12:d=1  hl=2 l=  34 prim: OCTET STRING      (the key)
+        # Of course there's a bit more complexity. In reality OCTET STRING
+        # contains an OCTET STRING of length 32! So the last two bytes here
+        # are \x04\x20, which is an OCTET STRING of length 32.
+        pkcs8_prefix = b'0.\x02\x01\x000\x05\x06\x03+ep\x04"\x04 '
+        return self._generic_25519_load_private_bytes(
+            pkcs8_prefix, data, _Ed25519PrivateKey
+        )
+
+    def ed25519_generate_key(self):
+        return self._generic_25519_generate_key(
+            self._lib.NID_ED25519, _Ed25519PrivateKey
+        )
 
     def derive_scrypt(self, key_material, salt, length, n, r, p):
         buf = self._ffi.new("unsigned char[]", length)
