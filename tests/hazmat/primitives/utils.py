@@ -27,7 +27,8 @@ from ...utils import load_vectors_from_file
 
 
 def _load_all_params(path, file_names, param_loader):
-    all_params = []
+    from typing import Any
+    all_params = []  # type: Any
     for file_name in file_names:
         all_params.extend(
             load_vectors_from_file(os.path.join(path, file_name), param_loader)
@@ -177,7 +178,6 @@ def generate_base_hash_test(algorithm, digest_size, block_size):
 def base_hash_test(backend, algorithm, digest_size, block_size):
     m = hashes.Hash(algorithm, backend=backend)
     assert m.algorithm.digest_size == digest_size
-    assert m.algorithm.block_size == block_size
     m_copy = m.copy()
     assert m != m_copy
     assert m._ctx != m_copy._ctx

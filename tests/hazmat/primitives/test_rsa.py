@@ -79,7 +79,7 @@ def _build_oaep_sha2_vectors():
         hashes.SHA512(),
     ]
     for mgf1alg, oaepalg in itertools.product(hashalgs, hashalgs):
-        if mgf1alg.name == "sha1" and oaepalg.name == "sha1":
+        if mgf1alg.name == "sha1" and oaepalg.name == "sha1":  # type: ignore
             # We need to generate the cartesian product of the permutations
             # of all the SHAs above, but SHA1/SHA1 is something we already
             # tested previously and thus did not generate custom vectors for.
@@ -90,7 +90,7 @@ def _build_oaep_sha2_vectors():
                 os.path.join(
                     base_path,
                     "oaep-{0}-{1}.txt".format(
-                        mgf1alg.name, oaepalg.name
+                        mgf1alg.name, oaepalg.name  # type: ignore
                     )
                 ),
                 load_pkcs1_vectors
@@ -1827,10 +1827,10 @@ class TestRSANumbers(object):
 
     def test_public_numbers_invalid_types(self):
         with pytest.raises(TypeError):
-            rsa.RSAPublicNumbers(e=None, n=15)
+            rsa.RSAPublicNumbers(e=None, n=15)  # type: ignore
 
         with pytest.raises(TypeError):
-            rsa.RSAPublicNumbers(e=1, n=None)
+            rsa.RSAPublicNumbers(e=1, n=None)  # type: ignore
 
     def test_private_numbers_invalid_types(self):
         public_numbers = rsa.RSAPublicNumbers(e=1, n=15)
@@ -1844,7 +1844,7 @@ class TestRSANumbers(object):
                 dmq1=1,
                 iqmp=2,
                 public_numbers=public_numbers
-            )
+            )  # type: ignore
 
         with pytest.raises(TypeError):
             rsa.RSAPrivateNumbers(
@@ -1855,7 +1855,7 @@ class TestRSANumbers(object):
                 dmq1=1,
                 iqmp=2,
                 public_numbers=public_numbers
-            )
+            )  # type: ignore
 
         with pytest.raises(TypeError):
             rsa.RSAPrivateNumbers(
@@ -1866,7 +1866,7 @@ class TestRSANumbers(object):
                 dmq1=1,
                 iqmp=2,
                 public_numbers=public_numbers
-            )
+            )  # type: ignore
 
         with pytest.raises(TypeError):
             rsa.RSAPrivateNumbers(
@@ -1877,7 +1877,7 @@ class TestRSANumbers(object):
                 dmq1=1,
                 iqmp=2,
                 public_numbers=public_numbers
-            )
+            )  # type: ignore
 
         with pytest.raises(TypeError):
             rsa.RSAPrivateNumbers(
@@ -1888,7 +1888,7 @@ class TestRSANumbers(object):
                 dmq1=None,
                 iqmp=2,
                 public_numbers=public_numbers
-            )
+            )  # type: ignore
 
         with pytest.raises(TypeError):
             rsa.RSAPrivateNumbers(
@@ -1899,7 +1899,7 @@ class TestRSANumbers(object):
                 dmq1=1,
                 iqmp=None,
                 public_numbers=public_numbers
-            )
+            )  # type: ignore
 
         with pytest.raises(TypeError):
             rsa.RSAPrivateNumbers(
@@ -1910,7 +1910,7 @@ class TestRSANumbers(object):
                 dmq1=1,
                 iqmp=2,
                 public_numbers=None
-            )
+            )  # type: ignore
 
     def test_invalid_public_numbers_argument_values(self, backend):
         # Start with public_exponent=7, modulus=15. Then change one value at a

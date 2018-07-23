@@ -81,9 +81,9 @@ class InterfaceNotImplemented(Exception):
 
 
 if hasattr(inspect, "signature"):
-    signature = inspect.signature
+    signature = inspect.signature  # type: ignore
 else:
-    signature = inspect.getargspec
+    signature = inspect.getargspec  # type: ignore
 
 
 def verify_interface(iface, klass):

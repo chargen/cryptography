@@ -11,6 +11,7 @@ import math
 import os
 import re
 from contextlib import contextmanager
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -19,6 +20,10 @@ import six
 from cryptography.exceptions import UnsupportedAlgorithm
 
 import cryptography_vectors
+
+
+if TYPE_CHECKING:
+    from typing import Any, Dict, Union  # noqa
 
 
 HashVector = collections.namedtuple("HashVector", ["message", "digest"])
@@ -51,7 +56,7 @@ def load_vectors_from_file(filename, loader, mode="r"):
 
 
 def load_nist_vectors(vector_data):
-    test_data = None
+    test_data = {}  # type: Dict[str, Union[bool, str]]
     data = []
 
     for line in vector_data:
@@ -140,12 +145,12 @@ def load_hash_vectors(vector_data):
             md = line.split(" = ")[1]
             # after MD is found the Msg+MD (+ potential key) tuple is complete
             if key is not None:
-                vectors.append(KeyedHashVector(msg, md, key))
+                vectors.append(KeyedHashVector(msg, md, key))  # type: ignore
                 key = None
                 msg = None
                 md = None
             else:
-                vectors.append(HashVector(msg, md))
+                vectors.append(HashVector(msg, md))  # type: ignore
                 msg = None
                 md = None
         else:
@@ -162,8 +167,8 @@ def load_pkcs1_vectors(vector_data):
     attr = None
     key = None
     example_vector = None
-    examples = []
-    vectors = []
+    examples = []  # type: ignore
+    vectors = []  # type: ignore
     for line in vector_data:
         if (
             line.startswith("# PSS Example") or
@@ -288,7 +293,7 @@ def load_pkcs1_vectors(vector_data):
 
 
 def load_rsa_nist_vectors(vector_data):
-    test_data = None
+    test_data = {}  # type: ignore
     p = None
     salt_length = None
     data = []
@@ -557,7 +562,7 @@ def load_kasvs_dh_vectors(vector_data):
     data = {
         "fail_z": False,
         "fail_agree": False
-    }
+    }  # type: Dict[str, Union[bool, int, bytes]]
 
     for line in vector_data:
         line = line.strip()
@@ -585,6 +590,7 @@ def load_kasvs_dh_vectors(vector_data):
         elif line.startswith("Result = "):
             result_str = line.split("=")[1].strip()
             match = result_rx.match(result_str)
+            assert match is not None
 
             if match.group(1) == "F":
                 if int(match.group(2)) in (5, 10):
@@ -661,7 +667,7 @@ def load_kasvs_ecdh_vectors(vector_data):
     data = {
         "CAVS": {},
         "IUT": {},
-    }
+    }  # type: Dict[str, Any]
     tag = None
     for line in vector_data:
         line = line.strip()
@@ -695,6 +701,7 @@ def load_kasvs_ecdh_vectors(vector_data):
             result_str = line.split("=")[1].strip()
             match = result_rx.match(result_str)
 
+            assert match is not None
             if match.group(1) == "F":
                 data["fail"] = True
             else:
@@ -721,8 +728,8 @@ def load_x963_vectors(vector_data):
     vectors = []
 
     # Sets Metadata
-    hashname = None
-    vector = {}
+    hashname = ""
+    vector = {}  # type: Dict[str, Any]
     for line in vector_data:
         line = line.strip()
 
@@ -816,7 +823,7 @@ def load_ed25519_vectors(vector_data):
 
 
 def load_nist_ccm_vectors(vector_data):
-    test_data = None
+    test_data = {}
     section_data = None
     global_data = {}
     new_section = False

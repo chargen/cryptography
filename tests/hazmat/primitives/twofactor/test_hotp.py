@@ -94,7 +94,7 @@ class TestHOTP(object):
         secret = b"12345678901234567890"
 
         with pytest.raises(TypeError):
-            HOTP(secret, b"foo", SHA1(), backend)
+            HOTP(secret, b"foo", SHA1(), backend)  # type: ignore
 
     def test_get_provisioning_uri(self, backend):
         secret = b"12345678901234567890"
