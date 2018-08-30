@@ -12,7 +12,6 @@ from enum import Enum
 import six
 
 from cryptography import utils
-from cryptography.hazmat.primitives.asymmetric import dsa, ec, rsa
 from cryptography.x509.extensions import Extension, ExtensionType
 from cryptography.x509.name import Name
 
@@ -469,6 +468,7 @@ class CertificateBuilder(object):
         """
         Sets the requestor's public key (as found in the signing request).
         """
+        from cryptography.hazmat.primitives.asymmetric import dsa, ec, rsa
         if not isinstance(key, (dsa.DSAPublicKey, rsa.RSAPublicKey,
                                 ec.EllipticCurvePublicKey)):
             raise TypeError('Expecting one of DSAPublicKey, RSAPublicKey,'
