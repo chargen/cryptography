@@ -9,7 +9,7 @@ import abc
 import six
 
 from cryptography import utils
-from cryptography.x509 import ObjectIdentifier
+from cryptography.x509.oid import ObjectIdentifier
 
 
 class EllipticCurveOID(object):
